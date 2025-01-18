@@ -1,0 +1,47 @@
+<!-- select_user_type.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Select User Type</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        form {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        button {
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <form action="{{ url_for('show_museum_details') }}" method="post">
+        <h1>Select User Type</h1>
+        <input type="hidden" name="museum_name" value="{{ museum_name }}">
+        <button type="submit" name="user_type" value="Indian">Indian</button>
+        <button type="submit" name="user_type" value="Foreigner">Foreigner</button>
+    </form>
+</body>
+</html>
