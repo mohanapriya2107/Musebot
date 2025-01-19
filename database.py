@@ -1,3 +1,4 @@
+import os
 import mysql.connector
 from mysql.connector import Error
 import requests
@@ -5,6 +6,22 @@ from datetime import datetime,timedelta
 import calendar
 import sqlite3
 import re
+
+def create_connection():
+    """Create and return a connection to the MySQL database."""
+    try:
+        connection = mysql.connector.connect(
+            host=os.getenv("MYSQL_HOST", "localhost"),  # MySQL host (default: localhost)
+            user=os.getenv("MYSQL_USER", "root"),       # MySQL user (default: root)
+            password=os.getenv("MYSQL_PASSWORD", ""),   # MySQL password (default: empty)
+            database=os.getenv("MYSQL_DB", "museum")    # MySQL database name (default: museum)
+        )
+        if connection.is_connected():
+            print("Connected to MySQL")
+            return connection
+    except Error as e:
+        print(f"Error connecting to MySQL: {e}")
+    return None
 
 API_KEY = 'yi8U3ni7qxsREArm1ME1ZyMr9lU5liRl'
 
@@ -42,20 +59,6 @@ def is_public_holiday(booking_date):
         return True
     return False
 
-def create_connection():
-    """Create and return a connection to the MySQL database."""
-    try:
-        connection = mysql.connector.connect(
-            host='localhost',  # Replace with your MySQL host
-            user='root',  # Replace with your MySQL username
-            password='Mohana@04',  # Replace with your MySQL password
-            database='museum'  # Your database name
-        )
-        if connection.is_connected():
-            return connection
-    except Error as e:
-        print(f"Error: {e}")
-    return None
 
 def fetch_museum_data_by_name_with_prices(museum_name, user_type):
     connection = create_connection()
