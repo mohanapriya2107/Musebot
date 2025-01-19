@@ -13,10 +13,13 @@ services:
         value: Mohana@04
       - key: MYSQL_DB
         value: museum
+    dockerfilePath: ./Dockerfile  # Specify your Dockerfile for Flask
+    plan: free  # Use the free plan if applicable
     dependsOn:
       - name: mysql-db
 
-  - type: private_service
+  - type: web
     name: mysql-db
     env: docker
-    dockerfilePath: ./Dockerfile.mysql
+    dockerfilePath: ./Dockerfile.mysql  # Specify a separate Dockerfile for MySQL
+    plan: free
