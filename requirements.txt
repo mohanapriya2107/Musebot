@@ -1,5 +1,3 @@
 Flask==2.2.5
 joblib==1.3.2
-sqlite3==3.0.0  # Comes pre-installed with Python; you can omit it if not using a custom version.
-difflib  # Part of Python standard library; no need to install.
 numpy==1.23.5  # Implicitly required by scikit-learn.
