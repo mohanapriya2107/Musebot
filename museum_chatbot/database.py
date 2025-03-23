@@ -5,8 +5,37 @@ from datetime import datetime,timedelta
 import calendar
 import sqlite3
 import re
+import pymysql
+import time
+import logging
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
 
 API_KEY = 'yi8U3ni7qxsREArm1ME1ZyMr9lU5liRl'
+
+# Retry settings
+MAX_RETRIES = 3
+RETRY_DELAY = 2  # Seconds
+
+def get_db_connection():
+    retries = 0
+    while retries < MAX_RETRIES:
+        try:
+            connection = pymysql.connect(
+                host='localhost',
+                user='root',
+                password='Mohana@04',
+                database='museum',
+                cursorclass=pymysql.cursors.DictCursor
+            )
+            logging.info("✅ Database connection successful.")
+            return connection
+        except pymysql.MySQLError as e:
+            logging.error(f"❌ Database connection failed: {e}. Retrying ({retries+1}/{MAX_RETRIES})...")
+            time.sleep(RETRY_DELAY)
+            retries += 1
+
+    raise Exception("Database connection failed after multiple attempts.")
 
 def get_public_holidays_for_india(year=datetime.now().year):
     url = f"https://calendarific.com/api/v2/holidays"
@@ -43,19 +72,26 @@ def is_public_holiday(booking_date):
     return False
 
 def create_connection():
-    """Create and return a connection to the MySQL database."""
-    try:
-        connection = mysql.connector.connect(
-            host='localhost',  # Replace with your MySQL host
-            user='root',  # Replace with your MySQL username
-            password='Mohana@04',  # Replace with your MySQL password
-            database='museum'  # Your database name
-        )
-        if connection.is_connected():
-            return connection
-    except Error as e:
-        print(f"Error: {e}")
-    return None
+    """Create and return a connection to the MySQL database with retry logic."""
+    retries = 0
+    while retries < MAX_RETRIES:
+        try:
+            connection = mysql.connector.connect(
+                host='localhost',  # Replace with your MySQL host
+                user='root',  # Replace with your MySQL username
+                password='Mohana@04',  # Replace with your MySQL password
+                database='museum'  # Your database name
+            )
+            if connection.is_connected():
+                logging.info("✅ Database connection successful.")
+                return connection
+
+        except Error as e:
+            logging.error(f"❌ Database connection failed: {e}. Retrying ({retries+1}/{MAX_RETRIES})...")
+            time.sleep(RETRY_DELAY)
+            retries += 1
+
+    raise Exception("❌ Database connection failed after multiple attempts.")
 
 def fetch_museum_data_by_name_with_prices(museum_name, user_type):
     connection = create_connection()
@@ -66,7 +102,7 @@ def fetch_museum_data_by_name_with_prices(museum_name, user_type):
         museum_name = museum_name.strip()
         
         query = """
-            SELECT m.name, m.location, m.opening_hours, m.holidays, m.description,
+            SELECT m.name, m.address, m.location, m.opening_hours, m.holidays, m.description, m.required_time,
                    tp.adult_price, tp.children_price, tp.photography_fee, tp.student_fee
             FROM museumdetails m
             JOIN ticketprices tp ON tp.museum_id = m.id
@@ -83,10 +119,12 @@ def fetch_museum_data_by_name_with_prices(museum_name, user_type):
             if result:
                 museum_details = {
                     'name': result['name'],
+                    'address':result['address'],
                     'location': result['location'],
                     'opening_hours': result['opening_hours'],
                     'holidays': result['holidays'],
                     'description': result['description'],
+                    'required_time':result['required_time'],
                     'prices': {
                         'Adult': result['adult_price'],
                         'Children': result['children_price'],
@@ -258,6 +296,39 @@ def is_museum_open(museum_name, booking_date, booking_time):
             return False, "Database connection failed."
     except Exception as e:
         return False, f"Error processing opening hours: {str(e)}"
+
+def is_museumopen(museum_name, visit_date, visit_time):
+    """Check if the museum is open at the selected date and time."""
+    conn, cursor = create_connection()
+
+    # Fetch museum opening and closing hours
+    cursor.execute("SELECT opening_time, closing_time FROM museum WHERE name = ?", (museum_name,))
+    museum_hours = cursor.fetchone()
+
+    if not museum_hours:
+        conn.close()
+        return False, "Museum not found"
+
+    opening_time, closing_time = museum_hours
+
+    # Convert times to datetime objects
+    visit_time_obj = datetime.strptime(visit_time, "%H:%M")
+    opening_time_obj = datetime.strptime(opening_time, "%H:%M")
+    closing_time_obj = datetime.strptime(closing_time, "%H:%M")
+
+    # Validate time
+    if not (opening_time_obj <= visit_time_obj <= closing_time_obj):
+        conn.close()
+        return False, "Visit time is outside museum hours"
+
+    # Check if it's a holiday
+    cursor.execute("SELECT 1 FROM holidays WHERE date = ?", (visit_date,))
+    if cursor.fetchone():
+        conn.close()
+        return False, "Museum is closed on this date (holiday)"
+
+    conn.close()
+    return True, "Booking allowed"
 
 def execute_query(query, params=None):
     """Execute a database query with optional parameters."""
